@@ -238,26 +238,37 @@ export async function createDetailedBom(data: {
   operations: { name: string; workCenterId: string; sequence: number; duration: number }[];
   userId?: string;
 }) {
-  const bom = await prisma.billOfMaterial.create({
-    data: {
-      name: data.name,
-      productId: data.productId,
-      components: {
-        create: data.components.map(c => ({
-          productId: c.productId,
-          quantity: c.quantity,
-        })),
+  try {
+    const existingBom = await prisma.billOfMaterial.findUnique({
+      where: { productId: data.productId },
+    });
+
+    if (existingBom) {
+      await prisma.billOfMaterial.delete({
+        where: { id: existingBom.id },
+      });
+    }
+
+    const bom = await prisma.billOfMaterial.create({
+      data: {
+        name: data.name,
+        productId: data.productId,
+        components: {
+          create: data.components.map(c => ({
+            productId: c.productId,
+            quantity: c.quantity,
+          })),
+        },
+        operations: {
+          create: data.operations.map(o => ({
+            name: o.name,
+            workCenterId: o.workCenterId,
+            sequence: o.sequence,
+            duration: o.duration,
+          })),
+        },
       },
-      operations: {
-        create: data.operations.map(o => ({
-          name: o.name,
-          workCenterId: o.workCenterId,
-          sequence: o.sequence,
-          duration: o.duration,
-        })),
-      },
-    },
-  });
+    });
 
   await createAuditLog({
     userId: data.userId,
@@ -269,6 +280,10 @@ export async function createDetailedBom(data: {
 
   revalidatePath("/manufacturing/bom");
   return bom;
+  } catch (error: any) {
+    console.error("Error creating BOM:", error);
+    throw new Error(error.message || "Failed to create BOM due to database error");
+  }
 }
 
 export async function getBomDetails(productId: string) {

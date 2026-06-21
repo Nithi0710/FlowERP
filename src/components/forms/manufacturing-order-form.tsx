@@ -12,9 +12,11 @@ import { Badge } from "@/components/ui/badge";
 interface ManufacturingOrderFormProps {
   products: { id: string; name: string; sku: string; onHandQty: number }[];
   userId?: string;
+  isDialog?: boolean;
+  onSuccess?: () => void;
 }
 
-export function ManufacturingOrderForm({ products, userId }: ManufacturingOrderFormProps) {
+export function ManufacturingOrderForm({ products, userId, isDialog, onSuccess }: ManufacturingOrderFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetchingBom, setFetchingBom] = useState(false);
@@ -63,7 +65,11 @@ export function ManufacturingOrderForm({ products, userId }: ManufacturingOrderF
     try {
       await createManufacturingOrder({ productId, quantity, userId });
       toast.success("Manufacturing order created and inventory reserved.");
-      router.push("/manufacturing/orders");
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/manufacturing/orders");
+      }
     } catch (error) {
       console.error(error);
       toast.error("Failed to create manufacturing order.");
@@ -72,14 +78,9 @@ export function ManufacturingOrderForm({ products, userId }: ManufacturingOrderF
     }
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Manufacturing Order</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
+  const content = (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-6">
               <div>
                 <label className="text-sm font-medium">Finished Product</label>
@@ -113,9 +114,11 @@ export function ManufacturingOrderForm({ products, userId }: ManufacturingOrderF
                 <Button type="submit" disabled={loading || fetchingBom || !bom}>
                   {loading ? "Processing..." : "Create Work Order"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => router.back()}>
-                  Cancel
-                </Button>
+                {!isDialog && (
+                  <Button type="button" variant="outline" onClick={() => router.back()}>
+                    Cancel
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -172,6 +175,19 @@ export function ManufacturingOrderForm({ products, userId }: ManufacturingOrderF
             </div>
           </div>
         </form>
+  );
+
+  if (isDialog) {
+    return content;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Create Manufacturing Order</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {content}
       </CardContent>
     </Card>
   );

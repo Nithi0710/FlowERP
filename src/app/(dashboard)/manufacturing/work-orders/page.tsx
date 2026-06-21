@@ -2,11 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { WorkOrderProgress } from "@/components/manufacturing/work-order-progress";
 import { StatusBadge } from "@/components/ui/badge";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { WorkOrderCreateDialog } from "@/components/manufacturing/work-order-create-dialog";
+import { requireAuth } from "@/lib/rbac";
 
 export default async function WorkOrdersPage() {
+  const user = await requireAuth();
+
   const manufacturingOrders = await prisma.manufacturingOrder.findMany({
     where: {
       status: { in: ["CONFIRMED", "IN_PROGRESS"] },
@@ -24,6 +25,11 @@ export default async function WorkOrdersPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -31,11 +37,7 @@ export default async function WorkOrdersPage() {
           <h1 className="text-2xl font-bold">Work Order Progress</h1>
           <p className="text-sm text-gray-500">Track operations and work centre status for active manufacturing orders</p>
         </div>
-        <Link href="/manufacturing/orders/new">
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" /> Create Work Order
-          </Button>
-        </Link>
+        <WorkOrderCreateDialog products={products} userId={user.id} />
       </div>
       
       <div className="grid gap-6 md:grid-cols-2">
