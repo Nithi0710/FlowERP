@@ -224,6 +224,65 @@ export async function createManufacturingOrder(data: {
     newValue: mo.orderNumber,
   });
 
+  // Automatically confirm the order to reserve stock and generate Work Orders
+  await confirmManufacturingOrder(mo.id, data.userId);
+
   revalidatePath("/manufacturing/orders");
   return mo;
+}
+
+export async function createDetailedBom(data: {
+  name: string;
+  productId: string;
+  components: { productId: string; quantity: number }[];
+  operations: { name: string; workCenterId: string; sequence: number; duration: number }[];
+  userId?: string;
+}) {
+  const bom = await prisma.billOfMaterial.create({
+    data: {
+      name: data.name,
+      productId: data.productId,
+      components: {
+        create: data.components.map(c => ({
+          productId: c.productId,
+          quantity: c.quantity,
+        })),
+      },
+      operations: {
+        create: data.operations.map(o => ({
+          name: o.name,
+          workCenterId: o.workCenterId,
+          sequence: o.sequence,
+          duration: o.duration,
+        })),
+      },
+    },
+  });
+
+  await createAuditLog({
+    userId: data.userId,
+    action: "CREATE",
+    module: "BoM",
+    entityId: bom.id,
+    newValue: bom.name,
+  });
+
+  revalidatePath("/manufacturing/bom");
+  return bom;
+}
+
+export async function getBomDetails(productId: string) {
+  const bom = await prisma.billOfMaterial.findUnique({
+    where: { productId },
+    include: {
+      components: {
+        include: { product: true },
+      },
+      operations: {
+        include: { workCenter: true },
+        orderBy: { sequence: "asc" },
+      },
+    },
+  });
+  return bom;
 }

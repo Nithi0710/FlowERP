@@ -1,35 +1,68 @@
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent } from "@/components/ui/card";
-import { DataTable } from "@/components/ui/data-table";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { WorkOrderProgress } from "@/components/manufacturing/work-order-progress";
 import { StatusBadge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export default async function WorkOrdersPage() {
-  const orders = await prisma.workOrder.findMany({
+  const manufacturingOrders = await prisma.manufacturingOrder.findMany({
+    where: {
+      status: { in: ["CONFIRMED", "IN_PROGRESS"] },
+    },
     include: {
-      operation: true,
-      workCenter: true,
-      assignee: true,
-      manufacturingOrder: { include: { product: true } },
+      product: true,
+      workOrders: {
+        include: {
+          operation: true,
+          workCenter: true,
+        },
+        orderBy: { sequence: "asc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Work Orders</h1>
-        <p className="text-sm text-gray-500">Individual manufacturing operations</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Work Order Progress</h1>
+          <p className="text-sm text-gray-500">Track operations and work centre status for active manufacturing orders</p>
+        </div>
+        <Link href="/manufacturing/orders/new">
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" /> Create Work Order
+          </Button>
+        </Link>
       </div>
-      <Card><CardContent className="pt-6">
-        <DataTable data={orders as unknown as Record<string, unknown>[]} columns={[
-          { key: "workOrderNumber", header: "WO #", render: (i) => <span className="font-medium text-indigo-600">{String(i.workOrderNumber)}</span> },
-          { key: "mo", header: "MO", render: (i) => String((i.manufacturingOrder as {orderNumber?:string})?.orderNumber) },
-          { key: "product", header: "Product", render: (i) => String(((i.manufacturingOrder as {product?:{name?:string}})?.product)?.name) },
-          { key: "operation", header: "Operation", render: (i) => String((i.operation as {name?:string})?.name || "-") },
-          { key: "workCenter", header: "Work Center", render: (i) => String((i.workCenter as {name?:string})?.name || "-") },
-          { key: "status", header: "Status", render: (i) => <StatusBadge status={String(i.status)} /> },
-        ]} />
-      </CardContent></Card>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        {manufacturingOrders.map((mo) => (
+          <Card key={mo.id}>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-lg">{mo.orderNumber}</CardTitle>
+                  <p className="text-sm font-medium mt-1">Product: {mo.product.name}</p>
+                  <p className="text-sm text-gray-500">Qty: {mo.quantity}</p>
+                </div>
+                <StatusBadge status={mo.status} />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <WorkOrderProgress workOrders={mo.workOrders as any[]} />
+            </CardContent>
+          </Card>
+        ))}
+
+        {manufacturingOrders.length === 0 && (
+          <div className="col-span-2 text-center py-12 text-gray-500 bg-gray-50 rounded-lg border border-dashed">
+            No active manufacturing orders found. Create and confirm an order to track its progress.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
