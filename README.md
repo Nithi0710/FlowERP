@@ -1,5 +1,8 @@
 # 🏭 FlowERP – Smart Manufacturing ERP & Business Control Tower
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-View%20Application-blue?style=for-the-badge)](https://flow-erp-ten.vercel.app/)
+
+
 A production-ready, full-stack ERP platform built for **Shiv Furniture Works**, managing the complete **Demand-to-Delivery** lifecycle — from sales orders to procurement, manufacturing, and inventory — in real time.
 
 FlowERP unifies Sales, Purchase, Manufacturing, and Inventory into a single, intelligent system. When stock runs short, the platform automatically triggers procurement or manufacturing orders, eliminating manual coordination between departments. A live **ERP Control Tower** and **Executive War Room** give every role — from shop floor to CEO — a real-time view of business health.
